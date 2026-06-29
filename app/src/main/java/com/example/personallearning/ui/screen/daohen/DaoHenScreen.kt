@@ -82,8 +82,7 @@ fun DaoHenScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                windowInsets = WindowInsets(left = 0, top = 0, right = 0, bottom = 0)
+                )
             )
         }
     ) { padding ->
