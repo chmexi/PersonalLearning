@@ -1,26 +1,51 @@
 package com.example.personallearning.ui.screen.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+private data class ModuleDef(
+    val title: String, val subtitle: String, val emoji: String,
+    val gradient: List<Color>, val onClick: () -> Unit
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onDaoHenClick: () -> Unit
 ) {
+    val modules = listOf(
+        ModuleDef("道痕", "每日7问，自省反思", "✍️",
+            listOf(Color(0xFF667eea), Color(0xFF764ba2)),
+            onClick = onDaoHenClick),
+        ModuleDef("英语口语", "即将推出", "🗣️",
+            listOf(Color(0xFFf093fb), Color(0xFFf5576c)),
+            onClick = {}),
+        ModuleDef("表达练习", "即将推出", "🎤",
+            listOf(Color(0xFF4facfe), Color(0xFF00f2fe)),
+            onClick = {}),
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Personal Learning", style = MaterialTheme.typography.titleMedium) },
+                title = {
+                    Column {
+                        Text("自我修行", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("每日一点，日有所进", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -33,64 +58,96 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(Modifier.height(32.dp))
-            Text(
-                "选择练习",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
+            Text("选择修行", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
-            ModuleCard(
-                title = "道痕",
-                subtitle = "每日7问，自省反思",
-                emoji = "✍️",
-                onClick = onDaoHenClick
-            )
+            modules.forEach { module ->
+                ModuleGradientCard(
+                    title = module.title,
+                    subtitle = module.subtitle,
+                    emoji = module.emoji,
+                    gradient = module.gradient,
+                    onClick = module.onClick
+                )
+            }
 
-            ModuleCard(
-                title = "英语口语",
-                subtitle = "即将推出",
-                emoji = "🗣️",
-                onClick = {}
-            )
+            Spacer(Modifier.weight(1f))
 
-            ModuleCard(
-                title = "表达练习",
-                subtitle = "即将推出",
-                emoji = "🎤",
-                onClick = {}
-            )
+            // 今日道痕状态
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("📝", fontSize = 20.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Text("今日道痕", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.weight(1f))
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(" 开始记录 ", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-private fun ModuleCard(title: String, subtitle: String, emoji: String, onClick: () -> Unit) {
+private fun ModuleGradientCard(
+    title: String, subtitle: String, emoji: String,
+    gradient: List<Color>, onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .background(
+                    Brush.horizontalGradient(gradient),
+                    RoundedCornerShape(16.dp)
+                )
         ) {
-            Text(emoji, fontSize = 36.sp)
-            Spacer(Modifier.width(20.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.White.copy(alpha = 0.25f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(emoji, fontSize = 22.sp)
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, fontSize = 13.sp, color = Color.White.copy(alpha = 0.8f))
+                }
+                Spacer(Modifier.weight(1f))
+                Text("›", fontSize = 28.sp, color = Color.White.copy(alpha = 0.6f))
             }
         }
     }
