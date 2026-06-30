@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.personallearning.ui.screen.daohen.DaoHenScreen
+import com.example.personallearning.ui.screen.history.HistoryScreen
 import com.example.personallearning.ui.screen.home.HomeScreen
 import com.example.personallearning.ui.theme.PersonalLearningTheme
 import com.example.personallearning.ui.viewmodel.DaoHenViewModel
@@ -30,6 +31,13 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("daohen") {
                         DaoHenScreen(
+                            viewModel = daoHenViewModel,
+                            onBack = { navController.popBackStack() },
+                            onHistoryClick = { navController.navigate("history") }
+                        )
+                    }
+                    composable("history") {
+                        HistoryScreen(
                             viewModel = daoHenViewModel,
                             onBack = { navController.popBackStack() }
                         )

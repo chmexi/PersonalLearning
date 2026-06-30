@@ -7,12 +7,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -20,49 +19,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.personallearning.ui.viewmodel.DaoHenViewModel
 
-private data class QuestionDef(val key: String, val label: String, val hint: String, val icon: String)
+private data class QuestionDef(val key: String, val label: String, val hint: String)
 
 private val questions = listOf(
-    QuestionDef("q1", "今天最起波澜的一件事是什么？", "写那件真正让你起波澜的事", "🌊"),
-    QuestionDef("q2", "当时我的第一反应是什么？", "身体感受、本能冲动都可以", "⚡"),
-    QuestionDef("q3", "我其实想得到什么？", "剥开表面，底下真正想要的", "🎯"),
-    QuestionDef("q4", "我其实在害怕什么？", "不敢直面的那部分", "😨"),
-    QuestionDef("q5", "我给自己找了什么理由？", "自圆其说的那一套", "🛡️"),
-    QuestionDef("q6", "今天捞出来的主石头是什么？", "核心洞见，一句话概括", "🪨"),
-    QuestionDef("q7", "如果明天再遇到同样的事，我准备怎么选？", "给明天留一个清醒的选择", "🌅"),
+    QuestionDef("q1", "今天最起波澜的一件事是什么。", "写那件真正让你起波澜的事"),
+    QuestionDef("q2", "当时我的第一反应是什么。", "身体感受、本能冲动都可以"),
+    QuestionDef("q3", "我其实想得到什么。", "剥开表面，底下真正想要的"),
+    QuestionDef("q4", "我其实在害怕什么。", "不敢直面的那部分"),
+    QuestionDef("q5", "我给自己找了什么理由。", "自圆其说的那一套"),
+    QuestionDef("q6", "今天捞出来的主石头是什么。", "核心洞见，一句话概括"),
+    QuestionDef("q7", "如果明天再遇到同样的事，我准备怎么选。", "给明天留一个清醒的选择"),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DaoHenScreen(
     viewModel: DaoHenViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onHistoryClick: () -> Unit
 ) {
     val todayEntry by viewModel.todayEntry.collectAsState()
     val yesterdayStone by viewModel.yesterdayStone.collectAsState()
-    var showHelp by remember { mutableStateOf(false) }
-
-    // 使用说明弹窗
-    if (showHelp) {
-        AlertDialog(
-            onDismissRequest = { showHelp = false },
-            title = { Text("关于道痕", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text("道痕是每日自省的工具，分三步：", fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("① 记下今日波澜 — 那件真正让你起波澜的事", fontSize = 13.sp, lineHeight = 20.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text("② 捞出主石头 — 看见真正卡住你的那块石头", fontSize = 13.sp, lineHeight = 20.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text("③ 给明天留一选 — 留一个更清醒的选择", fontSize = 13.sp, lineHeight = 20.sp)
-                    Spacer(Modifier.height(12.dp))
-                    Text("版本 1.0 · 每日道痕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            confirmButton = { TextButton(onClick = { showHelp = false }) { Text("知道了") } }
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -74,8 +51,8 @@ fun DaoHenScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showHelp = true }) {
-                        Icon(Icons.Default.HelpOutline, contentDescription = "帮助")
+                    IconButton(onClick = onHistoryClick) {
+                        Icon(Icons.Default.History, contentDescription = "历史")
                     }
                     TextButton(onClick = { viewModel.sync() }) { Text("同步", fontSize = 13.sp) }
                 },
@@ -96,40 +73,50 @@ fun DaoHenScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    )
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
                     .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Column {
                     Text(viewModel.todayStr, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(4.dp))
                     Text("每日道痕", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Text("先写今日波澜，再捞出主石头，最后给明天留一个更清醒的选择。",
-                        fontSize = 13.sp, lineHeight = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
+            // === 今日写法：三步说明 ===
+            Spacer(Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("今日写法", fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Spacer(Modifier.height(12.dp))
+                    WritingStep("01", "记下今日波澜", "先抓住那件真正让你起波澜的事，不急着解释，也不急着下结论。")
+                    Spacer(Modifier.height(10.dp))
+                    WritingStep("02", "捞出主石头", "把想要、害怕和自我辩护一起捞出来，看见真正卡住你的那块石头。")
+                    Spacer(Modifier.height(10.dp))
+                    WritingStep("03", "给明天留一选", "最后只留一个更清醒、能执行的选择，给下一次相似的处境做准备。")
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
             // === 昨日石头 ===
             if (yesterdayStone.isNotBlank()) {
-                Spacer(Modifier.height(16.dp))
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFFF3E5F5).copy(alpha = 0.6f)
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🪨", fontSize = 16.sp)
-                            Spacer(Modifier.width(6.dp))
-                            Text("昨天的石头", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF7B1FA2))
-                        }
+                        Text("昨天的石头", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF7B1FA2))
                         Spacer(Modifier.height(6.dp))
                         Text(yesterdayStone, fontSize = 14.sp, lineHeight = 22.sp,
                             color = Color(0xFF4A148C))
@@ -137,7 +124,7 @@ fun DaoHenScreen(
                 }
                 Spacer(Modifier.height(16.dp))
             } else {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(8.dp))
             }
 
             // === 7 个问题（日记卡片风格） ===
@@ -154,21 +141,16 @@ fun DaoHenScreen(
                 }
 
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // 题目标题
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
-                                modifier = Modifier.size(28.dp),
-                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.size(26.dp),
+                                shape = RoundedCornerShape(13.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -177,14 +159,10 @@ fun DaoHenScreen(
                                 }
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text("${q.icon}  ${q.label}",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                lineHeight = 22.sp)
+                            Text(q.label, style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
                         }
                         Spacer(Modifier.height(10.dp))
-
-                        // 输入框
                         OutlinedTextField(
                             value = text,
                             onValueChange = { viewModel.saveAnswer(q.key, it) },
@@ -193,8 +171,7 @@ fun DaoHenScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            minLines = 2,
-                            maxLines = 6,
+                            minLines = 2, maxLines = 6,
                             shape = RoundedCornerShape(8.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
@@ -205,19 +182,48 @@ fun DaoHenScreen(
                 }
             }
 
+            // === 放下这块石头 ===
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = { /* 已自动保存，无需额外操作 */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF7B1FA2)
+                )
+            ) {
+                Text("放下这块石头", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(8.dp))
+
             // === 底部提示 ===
-            Spacer(Modifier.height(16.dp))
             Text(
                 "答案自动保存到本地 · 点击右上角同步到云端",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 8.dp),
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun WritingStep(step: String, title: String, desc: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(step, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.width(28.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onTertiaryContainer)
+            Spacer(Modifier.height(2.dp))
+            Text(desc, fontSize = 12.sp, lineHeight = 18.sp,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f))
         }
     }
 }
