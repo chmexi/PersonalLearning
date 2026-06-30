@@ -5,10 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.personallearning.data.model.DaoHenEntry
+import com.example.personallearning.data.model.ExpressEntry
 
-@Database(entities = [DaoHenEntry::class], version = 1, exportSchema = false)
+@Database(entities = [DaoHenEntry::class, ExpressEntry::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun daoHenDao(): DaoHenDao
+    abstract fun expressDao(): ExpressDao
 
     companion object {
         @Volatile
@@ -19,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "personal_learning.db"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }

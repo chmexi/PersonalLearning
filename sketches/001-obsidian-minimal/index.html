@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>表达训练 · 专注版</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    background: #1E1E2E; color: #CDD6F4;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+    max-width: 420px; margin: 0 auto; min-height: 100vh;
+  }
+  /* status bar area */
+  .status-bar { padding: 16px 20px 0; display: flex; justify-content: space-between; font-size: 12px; color: #6C7086; letter-spacing: 0.3px; }
+  /* header */
+  .header { padding: 12px 20px 4px; }
+  .header h1 { font-size: 26px; font-weight: 700; color: #CDD6F4; letter-spacing: -0.5px; }
+  .header .subtitle { font-size: 13px; color: #6C7086; margin-top: 2px; }
+  /* streak */
+  .streak { display: flex; align-items: center; gap: 8px; padding: 16px 20px 8px; font-size: 13px; color: #A6E3A1; }
+  .streak .dot { width: 8px; height: 8px; background: #A6E3A1; border-radius: 50%; }
+  .streak .muted { color: #6C7086; }
+  /* daily progress */
+  .progress { padding: 8px 20px 16px; }
+  .progress-bar { height: 3px; background: #313244; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #89B4FA; border-radius: 2px; transition: width 0.3s; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: #6C7086; margin-top: 4px; }
+  /* section divider */
+  .section-title { padding: 8px 20px 4px; font-size: 11px; font-weight: 600; color: #585B70; text-transform: uppercase; letter-spacing: 1px; }
+  /* exercise list */
+  .ex-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; cursor: pointer; border-bottom: 1px solid #313244; transition: background 0.15s; }
+  .ex-item:hover { background: #181825; }
+  .ex-num { width: 28px; height: 28px; border-radius: 50%; background: #313244; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #6C7086; flex-shrink: 0; margin-top: 2px; }
+  .ex-num.done { background: #45475A; color: #A6E3A1; }
+  .ex-body { flex: 1; min-width: 0; }
+  .ex-body .title { font-size: 15px; font-weight: 500; color: #CDD6F4; }
+  .ex-body .desc { font-size: 12px; color: #6C7086; margin-top: 2px; }
+  .ex-body .duration { font-size: 11px; color: #585B70; margin-top: 2px; }
+  .ex-arrow { color: #585B70; font-size: 18px; margin-top: 4px; }
+  /* bottom tab */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 420px; display: flex; background: #181825; border-top: 1px solid #313244; padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .nav-item { flex: 1; text-align: center; font-size: 11px; color: #585B70; cursor: pointer; }
+  .nav-item.active { color: #89B4FA; }
+  .nav-icon { font-size: 20px; margin-bottom: 2px; }
+  /* spacing for bottom nav */
+  .spacer { height: 72px; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>6月30日 周二</span>
+  <span>完成 1/5</span>
+</div>
+
+<div class="header">
+  <h1>表达训练</h1>
+  <div class="subtitle">每天15分钟，磨一把嘴</div>
+</div>
+
+<div class="streak">
+  <span class="dot"></span>
+  <span>连续 7 天</span>
+  <span class="muted">· 昨日已练</span>
+</div>
+
+<div class="progress">
+  <div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div>
+  <div class="progress-label"><span>今日进度</span><span>1/5</span></div>
+</div>
+
+<div class="section-title">今日训练</div>
+
+<div class="ex-item" onclick="this.classList.toggle('done')">
+  <div class="ex-num done">✓</div>
+  <div class="ex-body">
+    <div class="title">📖 复述训练</div>
+    <div class="desc">看一段文字，用自己的话复述核心</div>
+    <div class="duration">3 分钟</div>
+  </div>
+  <div class="ex-arrow">→</div>
+</div>
+
+<div class="ex-item">
+  <div class="ex-num">2</div>
+  <div class="ex-body">
+    <div class="title">🔑 关键词串联</div>
+    <div class="desc">用3个词撑起一段话</div>
+    <div class="duration">2 分钟</div>
+  </div>
+  <div class="ex-arrow">→</div>
+</div>
+
+<div class="ex-item">
+  <div class="ex-num">3</div>
+  <div class="ex-body">
+    <div class="title">🔍 微观观察</div>
+    <div class="desc">描述今天被忽略的小事</div>
+    <div class="duration">3 分钟</div>
+  </div>
+  <div class="ex-arrow">→</div>
+</div>
+
+<div class="ex-item">
+  <div class="ex-num">4</div>
+  <div class="ex-body">
+    <div class="title">🎧 听觉预线</div>
+    <div class="desc">听一段音频，复述内容</div>
+    <div class="duration">3 分钟</div>
+  </div>
+  <div class="ex-arrow">→</div>
+</div>
+
+<div class="ex-item">
+  <div class="ex-num">5</div>
+  <div class="ex-body">
+    <div class="title">🗣️ 压缩表达</div>
+    <div class="desc">2分钟内说清一件事</div>
+    <div class="duration">2 分钟</div>
+  </div>
+  <div class="ex-arrow">→</div>
+</div>
+
+<div class="spacer"></div>
+
+<div class="bottom-nav">
+  <div class="nav-item active">
+    <div class="nav-icon">📋</div>
+    <div>训练</div>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">📊</div>
+    <div>统计</div>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">⚙️</div>
+    <div>设置</div>
+  </div>
+</div>
+
+</body>
+</html>

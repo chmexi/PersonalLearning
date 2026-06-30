@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>表达训练 · 引导版</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    background: #1A1B2F; color: #E4E6F0;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+    max-width: 420px; margin: 0 auto; min-height: 100vh;
+  }
+  /* top bar */
+  .topbar { display: flex; align-items: center; padding: 16px 20px; gap: 12px; }
+  .topbar .back { width: 36px; height: 36px; border-radius: 10px; background: #2A2B40; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: #8888A0; }
+  .topbar .step-indicator { font-size: 13px; color: #8888A0; }
+  .topbar .step-indicator strong { color: #E4E6F0; }
+  /* current exercise */
+  .ex-container { padding: 8px 20px; }
+  .ex-number { font-size: 12px; color: #6C6C80; letter-spacing: 1px; }
+  .ex-title { font-size: 22px; font-weight: 700; margin-top: 4px; color: #F0F0FA; }
+  .ex-subtitle { font-size: 14px; color: #8888A0; margin-top: 6px; line-height: 1.6; }
+  /* prompt card */
+  .prompt-card { background: linear-gradient(135deg, #2A2B40, #222338); border-radius: 16px; padding: 24px; margin: 20px; }
+  .prompt-card .prompt-label { font-size: 11px; color: #6C6C80; text-transform: uppercase; letter-spacing: 1px; }
+  .prompt-card .prompt-text { font-size: 16px; color: #C0C0D0; margin-top: 12px; line-height: 1.7; padding: 12px; background: #1E1F34; border-radius: 8px; }
+  /* timer */
+  .timer { text-align: center; margin: 20px; }
+  .timer-circle { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #3A3B50; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+  .timer-circle .time { font-size: 28px; font-weight: 300; color: #F0F0FA; }
+  .timer-circle .time.active { color: #6CD4A0; }
+  .timer-label { font-size: 12px; color: #6C6C80; margin-top: 8px; }
+  .timer-controls { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
+  .btn { padding: 10px 28px; border-radius: 10px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; }
+  .btn-primary { background: #6CD4A0; color: #1A1B2F; }
+  .btn-outline { background: transparent; border: 1px solid #3A3B50; color: #8888A0; }
+  .btn-skip { background: transparent; border: none; color: #6C6C80; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  /* bottom progress dots */
+  .progress-dots { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #3A3B50; }
+  .dot.current { background: #6CD4A0; width: 24px; border-radius: 4px; }
+  .dot.done { background: #6CD4A0; }
+  .nav-labels { display: flex; justify-content: space-between; padding: 0 20px; font-size: 11px; color: #6C6C80; margin-top: 4px; }
+  /* full list at bottom */
+  .summary-section { padding: 20px; }
+  .summary-section .label { font-size: 11px; color: #6C6C80; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .summary-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 13px; color: #8888A0; }
+  .summary-item.done { color: #6CD4A0; }
+  .summary-item .sdot { width: 6px; height: 6px; border-radius: 50%; background: #3A3B50; flex-shrink: 0; }
+  .summary-item.done .sdot { background: #6CD4A0; }
+  .spacer { height: 24px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="back">←</div>
+  <div class="step-indicator">训练 2 / 5 · <strong>关键词串联</strong></div>
+</div>
+
+<div class="ex-container">
+  <div class="ex-number">练习 2 / 5</div>
+  <div class="ex-title">🔑 关键词串联</div>
+  <div class="ex-subtitle">给你 3 个词，用 1 分钟组织一段连贯的话。不要求完美，开口就行。</div>
+</div>
+
+<div class="prompt-card">
+  <div class="prompt-label">今日关键词</div>
+  <div class="prompt-text">☕ 咖啡 &nbsp;·&nbsp; 🏢 会议 &nbsp;·&nbsp; 🌧️ 雨</div>
+</div>
+
+<div class="timer">
+  <div class="timer-circle"><span class="time">01:00</span></div>
+  <div class="timer-label">准备时间 · 想好就可以开始说</div>
+  <div class="timer-controls">
+    <button class="btn btn-primary">开始录音</button>
+    <button class="btn btn-outline">跳过</button>
+  </div>
+  <button class="btn-skip" style="margin-top: 12px;">直接输入文字 →</button>
+</div>
+
+<div class="progress-dots">
+  <span class="dot done"></span>
+  <span class="dot current"></span>
+  <span class="dot"></span>
+  <span class="dot"></span>
+  <span class="dot"></span>
+</div>
+
+<div class="summary-section">
+  <div class="label">今日训练清单</div>
+  <div class="summary-item done"><span class="sdot"></span> 📖 复述训练</div>
+  <div class="summary-item done"><span class="sdot"></span> 🔑 关键词串联</div>
+  <div class="summary-item"><span class="sdot"></span> 🔍 微观观察</div>
+  <div class="summary-item"><span class="sdot"></span> 🎧 听觉预线</div>
+  <div class="summary-item"><span class="sdot"></span> 🗣️ 压缩表达</div>
+</div>
+
+<div class="spacer"></div>
+
+</body>
+</html>
