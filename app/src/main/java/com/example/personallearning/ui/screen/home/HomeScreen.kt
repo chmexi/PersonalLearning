@@ -23,7 +23,7 @@ private val accent = Color(0xFF89B4FA)
 private val green = Color(0xFFA6E3A1)
 
 private data class ModuleDef(
-    val title: String, val subtitle: String, val emoji: String,
+    val title: String, val subtitle: String,
     val color: Color, val onClick: () -> Unit
 )
 
@@ -34,9 +34,9 @@ fun HomeScreen(
     onExpressClick: () -> Unit
 ) {
     val modules = listOf(
-        ModuleDef("道痕", "每日7问，自省反思", "✍️", Color(0xFF89B4FA), onClick = onDaoHenClick),
-        ModuleDef("英语口语", "即将推出", "🗣️", Color(0xFFF5C2E7), onClick = {}),
-        ModuleDef("表达练习", "每天15分钟，磨一把嘴", "🎤", Color(0xFFA6E3A1), onClick = onExpressClick),
+        ModuleDef("道痕", "每日7问，自省反思", Color(0xFF89B4FA), onClick = onDaoHenClick),
+        ModuleDef("英语口语", "即将推出", Color(0xFFF5C2E7), onClick = {}),
+        ModuleDef("表达练习", "每天15分钟，磨一把嘴", Color(0xFFA6E3A1), onClick = onExpressClick),
     )
 
     Scaffold(
@@ -67,7 +67,6 @@ fun HomeScreen(
                 ModuleCard(
                     title = module.title,
                     subtitle = module.subtitle,
-                    emoji = module.emoji,
                     accentColor = module.color,
                     onClick = module.onClick
                 )
@@ -114,7 +113,7 @@ fun HomeScreen(
 
 @Composable
 private fun ModuleCard(
-    title: String, subtitle: String, emoji: String,
+    title: String, subtitle: String,
     accentColor: Color, onClick: () -> Unit
 ) {
     Card(
@@ -138,15 +137,6 @@ private fun ModuleCard(
                     .background(accentColor)
             )
             Spacer(Modifier.width(16.dp))
-            // 图标
-            Surface(
-                modifier = Modifier.size(44.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = surfaceAlt
-            ) {
-                Box(contentAlignment = Alignment.Center) { Text(emoji, fontSize = 20.sp) }
-            }
-            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = fg)
                 Spacer(Modifier.height(2.dp))
