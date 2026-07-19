@@ -5,38 +5,86 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.personallearning.data.model.DaoHenEntry
 import com.example.personallearning.data.repository.DaoHenRepository
+import com.example.personallearning.data.repository.SyncResult
+import com.example.personallearning.data.repository.SyncConflict
+import com.example.personallearning.data.repository.SettingsRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class DaoHenViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = DaoHenRepository(application)
+    private val settingsRepository = SettingsRepository(application)
+    private val saveTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    private var saveJob: Job? = null
+    private val saveMutex = Mutex()
 
     val allEntries: StateFlow<List<DaoHenEntry>> = repository.getAllEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _todayEntry = MutableStateFlow<DaoHenEntry?>(null)
-    val todayEntry: StateFlow<DaoHenEntry?> = _todayEntry.asStateFlow()
+    private val _selectedDate = MutableStateFlow(LocalDate.now())
+    val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
+
+    private val _currentEntry = MutableStateFlow<DaoHenEntry?>(null)
+    val currentEntry: StateFlow<DaoHenEntry?> = _currentEntry.asStateFlow()
 
     private val _yesterdayStone = MutableStateFlow("")
     val yesterdayStone: StateFlow<String> = _yesterdayStone.asStateFlow()
 
-    val todayStr = LocalDate.now().toString()
+    private val _saveStatus = MutableStateFlow("")
+    val saveStatus: StateFlow<String> = _saveStatus.asStateFlow()
+
+    private val _syncState = MutableStateFlow<SyncUiState>(SyncUiState.Idle)
+    val syncState: StateFlow<SyncUiState> = _syncState.asStateFlow()
+
+    private val _syncConflicts = MutableStateFlow<List<SyncConflict>>(emptyList())
+    val syncConflicts: StateFlow<List<SyncConflict>> = _syncConflicts.asStateFlow()
+
+    val todayProgress: StateFlow<DaoHenProgress> = allEntries
+        .map { entries ->
+            val today = LocalDate.now().toString()
+            entries.firstOrNull { it.date == today }.toProgress()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DaoHenProgress())
 
     init {
-        loadToday()
+        loadSelectedDate()
     }
 
-    fun loadToday() {
+    fun selectDate(date: LocalDate) {
+        if (_selectedDate.value == date) return
+        _saveStatus.value = ""
+        _selectedDate.value = date
+        _currentEntry.value = null
+        _yesterdayStone.value = ""
+        loadSelectedDate()
+    }
+
+    fun moveDate(days: Long) {
+        selectDate(_selectedDate.value.plusDays(days))
+    }
+
+    fun loadSelectedDate() {
         viewModelScope.launch {
-            val today = LocalDate.now().toString()
-            _todayEntry.value = repository.getEntryByDate(today)
-            _yesterdayStone.value = repository.getYesterdayStone(today) ?: ""
+            val date = _selectedDate.value.toString()
+            saveJob?.join()
+            val entry = repository.getEntryByDate(date)
+            val previousStone = repository.getYesterdayStone(date) ?: ""
+            if (_selectedDate.value.toString() == date) {
+                _currentEntry.value = entry
+                _yesterdayStone.value = previousStone
+            }
         }
     }
 
     fun saveAnswer(field: String, value: String) {
-        val entry = _todayEntry.value ?: DaoHenEntry(date = todayStr)
+        val entry = _currentEntry.value ?: DaoHenEntry(date = _selectedDate.value.toString())
         val updated = when (field) {
             "q1" -> entry.copy(q1 = value)
             "q2" -> entry.copy(q2 = value)
@@ -47,15 +95,93 @@ class DaoHenViewModel(application: Application) : AndroidViewModel(application) 
             "q7" -> entry.copy(q7 = value)
             else -> entry
         }
-        _todayEntry.value = updated
-        viewModelScope.launch { repository.saveEntry(updated) }
+        _currentEntry.value = updated
+        _saveStatus.value = "保存中..."
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch {
+            delay(350)
+            saveMutex.withLock {
+                repository.saveEntry(updated)
+            }
+            if (_currentEntry.value == updated) {
+                _saveStatus.value = "已保存 ${java.time.LocalTime.now().format(saveTimeFormatter)}"
+            }
+        }
     }
 
     fun sync() {
         viewModelScope.launch {
-            repository.syncToServer("http://49.232.149.194:5001")
-            repository.pullFromServer("http://49.232.149.194:5001")
-            loadToday()
+            _syncState.value = SyncUiState.Syncing
+            saveJob?.join()
+            val serverUrl = settingsRepository.settings.first().serverUrl
+            when (val result = repository.syncAll(serverUrl)) {
+                is SyncResult.Success -> {
+                    _syncState.value = SyncUiState.Success(
+                        "同步完成：上传 ${result.pushedCount} 条，拉取 ${result.pulledCount} 条"
+                    )
+                }
+                is SyncResult.Failure -> {
+                    _syncState.value = SyncUiState.Failure(result.message)
+                }
+                is SyncResult.Conflict -> {
+                    _syncConflicts.value = result.conflicts
+                    _syncState.value = SyncUiState.Conflict(result.conflicts.size)
+                }
+            }
+            loadSelectedDate()
         }
     }
+
+    fun resolveConflict(keepLocal: Boolean) {
+        val conflict = _syncConflicts.value.firstOrNull() ?: return
+        viewModelScope.launch {
+            _syncState.value = SyncUiState.Syncing
+            val result = if (keepLocal) {
+                val serverUrl = settingsRepository.settings.first().serverUrl
+                repository.resolveWithLocal(serverUrl, conflict)
+            } else {
+                repository.resolveWithRemote(conflict)
+                SyncResult.Success()
+            }
+
+            if (result is SyncResult.Failure) {
+                _syncState.value = SyncUiState.Failure(result.message)
+                return@launch
+            }
+
+            _syncConflicts.value = _syncConflicts.value.drop(1)
+            if (_syncConflicts.value.isEmpty()) {
+                _syncState.value = SyncUiState.Success("冲突已处理，记录已安全保存")
+            } else {
+                _syncState.value = SyncUiState.Conflict(_syncConflicts.value.size)
+            }
+            loadSelectedDate()
+        }
+    }
+}
+
+data class DaoHenProgress(
+    val answeredCount: Int = 0,
+    val isComplete: Boolean = false,
+    val mainStone: String = ""
+)
+
+sealed interface SyncUiState {
+    data object Idle : SyncUiState
+    data object Syncing : SyncUiState
+    data class Success(val message: String) : SyncUiState
+    data class Failure(val message: String) : SyncUiState
+    data class Conflict(val count: Int) : SyncUiState
+}
+
+private fun DaoHenEntry?.toProgress(): DaoHenProgress {
+    if (this == null) return DaoHenProgress()
+
+    val answers = listOf(q1, q2, q3, q4, q5, q6, q7)
+    val count = answers.count { it.isNotBlank() }
+    return DaoHenProgress(
+        answeredCount = count,
+        isComplete = count == answers.size,
+        mainStone = q6
+    )
 }

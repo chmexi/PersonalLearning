@@ -16,9 +16,11 @@ import com.example.personallearning.ui.screen.express.ExpressExerciseScreen
 import com.example.personallearning.ui.screen.express.ExpressHomeScreen
 import com.example.personallearning.ui.screen.history.HistoryScreen
 import com.example.personallearning.ui.screen.home.HomeScreen
+import com.example.personallearning.ui.screen.settings.SettingsScreen
 import com.example.personallearning.ui.theme.PersonalLearningTheme
 import com.example.personallearning.ui.viewmodel.DaoHenViewModel
 import com.example.personallearning.ui.viewmodel.ExpressViewModel
+import com.example.personallearning.ui.viewmodel.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,12 +31,21 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val daoHenViewModel: DaoHenViewModel = viewModel()
                 val expressViewModel: ExpressViewModel = viewModel()
+                val settingsViewModel: SettingsViewModel = viewModel()
 
                 NavHost(navController, startDestination = "home") {
                     composable("home") {
                         HomeScreen(
+                            viewModel = daoHenViewModel,
                             onDaoHenClick = { navController.navigate("daohen") },
-                            onExpressClick = { navController.navigate("express") }
+                            onExpressClick = { navController.navigate("express") },
+                            onSettingsClick = { navController.navigate("settings") }
+                        )
+                    }
+                    composable("settings") {
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            onBack = { navController.popBackStack() }
                         )
                     }
 
@@ -49,7 +60,11 @@ class MainActivity : ComponentActivity() {
                     composable("history") {
                         HistoryScreen(
                             viewModel = daoHenViewModel,
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onEntryClick = { date ->
+                                daoHenViewModel.selectDate(java.time.LocalDate.parse(date))
+                                navController.popBackStack()
+                            }
                         )
                     }
 

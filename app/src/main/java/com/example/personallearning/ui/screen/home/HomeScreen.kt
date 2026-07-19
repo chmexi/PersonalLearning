@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.personallearning.ui.viewmodel.DaoHenViewModel
 
 private val bg = Color(0xFF1E1E2E)
 private val surface = Color(0xFF2A2B40)
@@ -30,9 +33,12 @@ private data class ModuleDef(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    viewModel: DaoHenViewModel,
     onDaoHenClick: () -> Unit,
-    onExpressClick: () -> Unit
+    onExpressClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
+    val daoHenProgress by viewModel.todayProgress.collectAsState()
     val modules = listOf(
         ModuleDef("道痕", "每日7问，自省反思", Color(0xFF89B4FA), onClick = onDaoHenClick),
         ModuleDef("英语口语", "即将推出", Color(0xFFF5C2E7), onClick = {}),
@@ -46,6 +52,11 @@ fun HomeScreen(
                     Column {
                         Text("自我修行", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = fg)
                         Text("每日一点，日有所进", fontSize = 12.sp, color = muted)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "设置", tint = fg)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = bg, titleContentColor = fg)
@@ -94,13 +105,31 @@ fun HomeScreen(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("今日道痕", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = fg)
-                        Text("记录今天的石头", fontSize = 12.sp, color = muted)
+                        Text(
+                            when {
+                                daoHenProgress.isComplete -> "今日已完成"
+                                daoHenProgress.answeredCount > 0 -> "已写 ${daoHenProgress.answeredCount}/7"
+                                else -> "记录今天的石头"
+                            },
+                            fontSize = 12.sp,
+                            color = muted
+                        )
+                        if (daoHenProgress.mainStone.isNotBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                daoHenProgress.mainStone,
+                                fontSize = 12.sp,
+                                color = fg.copy(alpha = 0.78f),
+                                maxLines = 1
+                            )
+                        }
                     }
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = surfaceAlt
                     ) {
-                        Text(" 开始 ", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        Text(if (daoHenProgress.answeredCount > 0) " 继续 " else " 开始 ",
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                             fontSize = 12.sp, color = accent)
                     }
                 }
