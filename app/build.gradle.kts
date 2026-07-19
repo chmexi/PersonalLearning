@@ -4,6 +4,11 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
 }
 
+val releaseStoreFile = providers.gradleProperty("PERSONAL_LEARNING_STORE_FILE").orNull
+val releaseStorePassword = providers.gradleProperty("PERSONAL_LEARNING_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.gradleProperty("PERSONAL_LEARNING_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.gradleProperty("PERSONAL_LEARNING_KEY_PASSWORD").orNull
+
 android {
     namespace = "com.example.personallearning"
     compileSdk {
@@ -16,14 +21,26 @@ android {
         applicationId = "com.example.personallearning"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                 enable = false
             }

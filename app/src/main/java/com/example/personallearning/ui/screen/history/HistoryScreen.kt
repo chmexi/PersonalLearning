@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,13 @@ fun HistoryScreen(
     onEntryClick: (String) -> Unit
 ) {
     val allEntries by viewModel.allEntries.collectAsState()
+    var query by remember { mutableStateOf("") }
+    val filteredEntries = remember(allEntries, query) {
+        if (query.isBlank()) allEntries else allEntries.filter { entry ->
+            listOf(entry.date, entry.q1, entry.q3, entry.q4, entry.q6, entry.q7, entry.tags)
+                .any { it.contains(query.trim(), ignoreCase = true) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -61,17 +69,34 @@ fun HistoryScreen(
                 Text("暂无记录", color = muted)
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(allEntries, key = { it.id }) { entry ->
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    placeholder = { Text("搜索事件、石头或标签") },
+                    shape = RoundedCornerShape(8.dp)
+                )
+                Text(
+                    if (query.isBlank()) "共 ${allEntries.size} 天记录" else "找到 ${filteredEntries.size} 条记录",
+                    color = muted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                items(filteredEntries, key = { it.id }) { entry ->
                     HistoryCard(
                         entry = entry,
                         onClick = { onEntryClick(entry.date) }
                     )
                 }
+            }
             }
         }
     }
@@ -125,6 +150,23 @@ private fun HistoryCard(
                     fontSize = 12.sp, lineHeight = 18.sp,
                     color = muted,
                     maxLines = 2)
+            }
+            if (entry.tags.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(entry.tags.split(',').joinToString("  #", prefix = "#"), fontSize = 11.sp, color = accent)
+            }
+            if (entry.actionStatus > 0) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "行动：" + when (entry.actionStatus) {
+                        1 -> "做到了"
+                        2 -> "部分做到"
+                        3 -> "没做到"
+                        else -> "没有遇到"
+                    },
+                    fontSize = 11.sp,
+                    color = muted
+                )
             }
         }
     }

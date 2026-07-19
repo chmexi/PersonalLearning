@@ -37,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -119,6 +120,7 @@ fun DaoHenScreen(
     val saveStatus by viewModel.saveStatus.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
     val syncConflicts by viewModel.syncConflicts.collectAsState()
+    val pendingAction by viewModel.pendingAction.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     var currentStep by remember { mutableIntStateOf(0) }
@@ -227,6 +229,14 @@ fun DaoHenScreen(
                 onPickDate = { showDatePicker = true }
             )
 
+            if (isToday && pendingAction != null) {
+                Spacer(Modifier.height(16.dp))
+                ActionVerificationCard(
+                    entry = pendingAction!!,
+                    onVerify = viewModel::verifyPendingAction
+                )
+            }
+
             Spacer(Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -269,6 +279,12 @@ fun DaoHenScreen(
                 onValueChange = { viewModel.saveAnswer(questions[currentStep].key, it) }
             )
 
+            Spacer(Modifier.height(14.dp))
+            TagSelector(
+                selected = currentEntry?.tags.orEmpty().split(',').filter { it.isNotBlank() }.toSet(),
+                onChange = viewModel::saveTags
+            )
+
             Spacer(Modifier.height(18.dp))
             StepActions(
                 currentStep = currentStep,
@@ -299,6 +315,68 @@ fun DaoHenScreen(
                 }
             )
             Spacer(Modifier.height(28.dp))
+        }
+    }
+}
+
+private val tagOptions = listOf("关系", "工作", "拖延", "控制", "被否定", "边界", "自我怀疑", "情绪")
+
+@Composable
+private fun ActionVerificationCard(entry: DaoHenEntry, onVerify: (Int, String) -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = warm.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text("兑现昨天的选择", color = warm, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            Text(entry.q7, color = fg, fontSize = 15.sp, lineHeight = 22.sp)
+            Spacer(Modifier.height(12.dp))
+            Text("这次做得怎么样？", color = muted, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1 to "做到了", 2 to "部分做到").forEach { (status, label) ->
+                    OutlinedButton(
+                        onClick = { onVerify(status, "") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(6.dp)
+                    ) { Text(label) }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(3 to "没做到", 4 to "没有遇到").forEach { (status, label) ->
+                    TextButton(onClick = { onVerify(status, "") }, modifier = Modifier.weight(1f)) {
+                        Text(label, color = muted)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagSelector(selected: Set<String>, onChange: (Set<String>) -> Unit) {
+    Surface(color = surface, shape = RoundedCornerShape(8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Text("这次波澜与什么有关？", color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(8.dp))
+            tagOptions.chunked(4).forEach { rowTags ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    rowTags.forEach { tag ->
+                        FilterChip(
+                            selected = tag in selected,
+                            onClick = {
+                                onChange(if (tag in selected) selected - tag else selected + tag)
+                            },
+                            label = { Text(tag, fontSize = 11.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
         }
     }
 }

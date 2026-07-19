@@ -20,5 +20,8 @@ data class DaoHenEntry(
     val q6: String = "",      // 主石头
     val q7: String = "",      // 明天怎么做
     val syncStatus: Int = 0,  // 0=本地有修改, 1=与云端一致
-    val serverRevision: Int = 0 // 本地最后一次看到的云端版本，0=云端不存在/未知
+    val serverRevision: Int = 0, // 本地最后一次看到的云端版本，0=云端不存在/未知
+    val tags: String = "",
+    val actionStatus: Int = 0,
+    val actionNote: String = ""
 )

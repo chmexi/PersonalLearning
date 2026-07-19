@@ -15,6 +15,9 @@ interface DaoHenDao {
     @Query("SELECT q6 FROM daohen_entries WHERE date < :today ORDER BY date DESC LIMIT 1")
     suspend fun getYesterdayStone(today: String): String?
 
+    @Query("SELECT * FROM daohen_entries WHERE date < :today AND q7 != '' AND actionStatus = 0 ORDER BY date DESC LIMIT 1")
+    suspend fun getPendingAction(today: String): DaoHenEntry?
+
     @Query("SELECT * FROM daohen_entries WHERE syncStatus = 0")
     suspend fun getUnsyncedEntries(): List<DaoHenEntry>
 

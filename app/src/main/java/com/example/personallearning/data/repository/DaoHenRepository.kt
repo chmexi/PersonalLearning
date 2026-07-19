@@ -17,6 +17,8 @@ class DaoHenRepository(private val context: Context) {
 
     suspend fun getYesterdayStone(today: String): String? = dao.getYesterdayStone(today)
 
+    suspend fun getPendingAction(today: String): DaoHenEntry? = dao.getPendingAction(today)
+
     suspend fun saveEntry(entry: DaoHenEntry) {
         val existing = dao.getEntryByDate(entry.date)
         if (existing != null) {
@@ -144,6 +146,9 @@ class DaoHenRepository(private val context: Context) {
             q5 = q5,
             q6 = q6,
             q7 = q7,
+            tags = tags,
+            actionStatus = actionStatus,
+            actionNote = actionNote,
             id = id,
             revision = serverRevision
         )
@@ -159,6 +164,9 @@ class DaoHenRepository(private val context: Context) {
             q5 = q5.orEmpty(),
             q6 = q6.orEmpty(),
             q7 = q7.orEmpty(),
+            tags = tags.orEmpty(),
+            actionStatus = actionStatus,
+            actionNote = actionNote.orEmpty(),
             syncStatus = syncStatus,
             serverRevision = revision
         )

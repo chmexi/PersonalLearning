@@ -22,6 +22,9 @@ class DaoHenEntry(db.Model):
     q5 = db.Column(db.Text, default="")   # 给自己找了什么理由
     q6 = db.Column(db.Text, default="")   # 主石头
     q7 = db.Column(db.Text, default="")   # 明天怎么做
+    tags = db.Column(db.Text, default="")
+    action_status = db.Column(db.Integer, nullable=False, default=0)
+    action_note = db.Column(db.Text, default="")
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     updated_at = db.Column(db.DateTime, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
     revision = db.Column(db.Integer, nullable=False, default=1)
@@ -43,6 +46,13 @@ with app.app_context():
             text("ALTER TABLE daohen_entries ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
         )
         db.session.commit()
+    if "tags" not in columns:
+        db.session.execute(text("ALTER TABLE daohen_entries ADD COLUMN tags TEXT NOT NULL DEFAULT ''"))
+    if "action_status" not in columns:
+        db.session.execute(text("ALTER TABLE daohen_entries ADD COLUMN action_status INTEGER NOT NULL DEFAULT 0"))
+    if "action_note" not in columns:
+        db.session.execute(text("ALTER TABLE daohen_entries ADD COLUMN action_note TEXT NOT NULL DEFAULT ''"))
+    db.session.commit()
 
 
 def entry_json(entry):
@@ -50,6 +60,7 @@ def entry_json(entry):
         "id": entry.id, "date": entry.date,
         "q1": entry.q1, "q2": entry.q2, "q3": entry.q3,
         "q4": entry.q4, "q5": entry.q5, "q6": entry.q6, "q7": entry.q7,
+        "tags": entry.tags, "actionStatus": entry.action_status, "actionNote": entry.action_note,
         "revision": entry.revision,
         "updatedAt": entry.updated_at.isoformat() if entry.updated_at else None,
     }
@@ -83,9 +94,14 @@ def sync_entry():
         client_revision = data.get("revision", 0)
         if client_revision != entry.revision:
             return jsonify(entry_json(entry)), 409
-        for f in ("q1","q2","q3","q4","q5","q6","q7"):
-            if f in data:
-                setattr(entry, f, data[f])
+        field_map = {
+            "q1": "q1", "q2": "q2", "q3": "q3", "q4": "q4",
+            "q5": "q5", "q6": "q6", "q7": "q7", "tags": "tags",
+            "actionStatus": "action_status", "actionNote": "action_note",
+        }
+        for field, attribute in field_map.items():
+            if field in data:
+                setattr(entry, attribute, data[field])
         entry.revision += 1
     else:
         if data.get("revision", 0) != 0:
@@ -94,6 +110,8 @@ def sync_entry():
             date=date_str, q1=data.get("q1",""), q2=data.get("q2",""),
             q3=data.get("q3",""), q4=data.get("q4",""), q5=data.get("q5",""),
             q6=data.get("q6",""), q7=data.get("q7",""),
+            tags=data.get("tags", ""), action_status=data.get("actionStatus", 0),
+            action_note=data.get("actionNote", ""),
         )
         db.session.add(entry)
     db.session.commit()
@@ -132,10 +150,13 @@ def get_app_update():
         url_for("download_app_update", _external=True) if apk_exists else ""
     )
     return jsonify({
-        "versionCode": int(os.environ.get("APP_VERSION_CODE", "2")),
-        "versionName": os.environ.get("APP_VERSION_NAME", "1.1"),
+        "versionCode": int(os.environ.get("APP_VERSION_CODE", "3")),
+        "versionName": os.environ.get("APP_VERSION_NAME", "1.2"),
         "apkUrl": apk_url,
-        "releaseNotes": os.environ.get("APP_RELEASE_NOTES", ""),
+        "releaseNotes": os.environ.get(
+            "APP_RELEASE_NOTES",
+            "新增行动兑现、主题标签、本周复盘和历史搜索",
+        ),
         "publishedAt": os.environ.get("APP_PUBLISHED_AT", ""),
         "fileSize": os.path.getsize(apk_path) if apk_exists else 0,
     })

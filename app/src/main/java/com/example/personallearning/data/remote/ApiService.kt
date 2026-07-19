@@ -29,6 +29,9 @@ data class DaoHenDto(
     val q5: String? = "",
     val q6: String? = "",
     val q7: String? = "",
+    val tags: String? = "",
+    val actionStatus: Int = 0,
+    val actionNote: String? = "",
     val id: Long = 0,
     val revision: Int = 0,
     val updatedAt: String? = null

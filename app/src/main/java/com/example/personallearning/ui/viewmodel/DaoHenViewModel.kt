@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
+import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 
 class DaoHenViewModel(application: Application) : AndroidViewModel(application) {
@@ -46,6 +47,9 @@ class DaoHenViewModel(application: Application) : AndroidViewModel(application) 
     private val _syncConflicts = MutableStateFlow<List<SyncConflict>>(emptyList())
     val syncConflicts: StateFlow<List<SyncConflict>> = _syncConflicts.asStateFlow()
 
+    private val _pendingAction = MutableStateFlow<DaoHenEntry?>(null)
+    val pendingAction: StateFlow<DaoHenEntry?> = _pendingAction.asStateFlow()
+
     val todayProgress: StateFlow<DaoHenProgress> = allEntries
         .map { entries ->
             val today = LocalDate.now().toString()
@@ -53,8 +57,41 @@ class DaoHenViewModel(application: Application) : AndroidViewModel(application) 
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DaoHenProgress())
 
+    val weeklySummary: StateFlow<WeeklySummary> = allEntries
+        .map { entries -> entries.toWeeklySummary() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), WeeklySummary())
+
     init {
         loadSelectedDate()
+        loadPendingAction()
+    }
+
+    fun saveTags(tags: Set<String>) {
+        val entry = _currentEntry.value ?: DaoHenEntry(date = _selectedDate.value.toString())
+        saveEntryImmediately(entry.copy(tags = tags.sorted().joinToString(",")))
+    }
+
+    fun verifyPendingAction(status: Int, note: String = "") {
+        val entry = _pendingAction.value ?: return
+        viewModelScope.launch {
+            val updated = entry.copy(actionStatus = status, actionNote = note)
+            repository.saveEntry(updated)
+            _pendingAction.value = null
+        }
+    }
+
+    private fun loadPendingAction() {
+        viewModelScope.launch {
+            _pendingAction.value = repository.getPendingAction(LocalDate.now().toString())
+        }
+    }
+
+    private fun saveEntryImmediately(entry: DaoHenEntry) {
+        _currentEntry.value = entry
+        viewModelScope.launch {
+            repository.saveEntry(entry)
+            _saveStatus.value = "已保存 ${java.time.LocalTime.now().format(saveTimeFormatter)}"
+        }
     }
 
     fun selectDate(date: LocalDate) {
@@ -166,6 +203,14 @@ data class DaoHenProgress(
     val mainStone: String = ""
 )
 
+data class WeeklySummary(
+    val recordedDays: Int = 0,
+    val completedDays: Int = 0,
+    val verifiedActions: Int = 0,
+    val fulfilledActions: Int = 0,
+    val topTags: List<Pair<String, Int>> = emptyList()
+)
+
 sealed interface SyncUiState {
     data object Idle : SyncUiState
     data object Syncing : SyncUiState
@@ -183,5 +228,29 @@ private fun DaoHenEntry?.toProgress(): DaoHenProgress {
         answeredCount = count,
         isComplete = count == answers.size,
         mainStone = q6
+    )
+}
+
+private fun List<DaoHenEntry>.toWeeklySummary(): WeeklySummary {
+    val today = LocalDate.now()
+    val start = today.with(DayOfWeek.MONDAY)
+    val weekEntries = filter {
+        val date = runCatching { LocalDate.parse(it.date) }.getOrNull()
+        date != null && !date.isBefore(start) && !date.isAfter(today)
+    }
+    val tagCounts = weekEntries
+        .flatMap { it.tags.split(',').map(String::trim).filter(String::isNotBlank) }
+        .groupingBy { it }
+        .eachCount()
+        .entries
+        .sortedByDescending { it.value }
+        .take(3)
+        .map { it.key to it.value }
+    return WeeklySummary(
+        recordedDays = weekEntries.count { listOf(it.q1, it.q2, it.q3, it.q4, it.q5, it.q6, it.q7).any(String::isNotBlank) },
+        completedDays = weekEntries.count { listOf(it.q1, it.q2, it.q3, it.q4, it.q5, it.q6, it.q7).all(String::isNotBlank) },
+        verifiedActions = weekEntries.count { it.actionStatus > 0 },
+        fulfilledActions = weekEntries.count { it.actionStatus == 1 },
+        topTags = tagCounts
     )
 }
