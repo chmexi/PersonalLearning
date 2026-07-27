@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.personallearning.data.model.DaoHenEntry
 import com.example.personallearning.data.model.ExpressEntry
 
-@Database(entities = [DaoHenEntry::class, ExpressEntry::class], version = 5, exportSchema = false)
+@Database(entities = [DaoHenEntry::class, ExpressEntry::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun daoHenDao(): DaoHenDao
     abstract fun expressDao(): ExpressDao
@@ -116,6 +116,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf("transcript", "facts", "emotions", "stone", "betterChoice", "aiQuestion", "analysisSource", "analyzedAt").forEach { field ->
+                    db.execSQL("ALTER TABLE daohen_entries ADD COLUMN $field TEXT NOT NULL DEFAULT ''")
+                }
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -123,7 +131,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "personal_learning.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                 INSTANCE = instance
                 instance

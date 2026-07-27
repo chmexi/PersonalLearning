@@ -1,5 +1,5 @@
 """道痕服务器"""
-import sys, os
+import sys, os, json, time, threading, hmac
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from flask import Flask, request, jsonify, send_file, url_for
@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
 from datetime import date, datetime
+import requests
 
 db = SQLAlchemy()
 
@@ -28,6 +29,14 @@ class DaoHenEntry(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     updated_at = db.Column(db.DateTime, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
     revision = db.Column(db.Integer, nullable=False, default=1)
+    transcript = db.Column(db.Text, default="")
+    facts = db.Column(db.Text, default="")
+    emotions = db.Column(db.Text, default="")
+    stone = db.Column(db.Text, default="")
+    better_choice = db.Column(db.Text, default="")
+    ai_question = db.Column(db.Text, default="")
+    analysis_source = db.Column(db.Text, default="")
+    analyzed_at = db.Column(db.Text, default="")
 
 # ===== 路由 =====
 app = Flask(__name__)
@@ -52,6 +61,9 @@ with app.app_context():
         db.session.execute(text("ALTER TABLE daohen_entries ADD COLUMN action_status INTEGER NOT NULL DEFAULT 0"))
     if "action_note" not in columns:
         db.session.execute(text("ALTER TABLE daohen_entries ADD COLUMN action_note TEXT NOT NULL DEFAULT ''"))
+    for column in ("transcript", "facts", "emotions", "stone", "better_choice", "ai_question", "analysis_source", "analyzed_at"):
+        if column not in columns:
+            db.session.execute(text(f"ALTER TABLE daohen_entries ADD COLUMN {column} TEXT NOT NULL DEFAULT ''"))
     db.session.commit()
 
 
@@ -61,6 +73,10 @@ def entry_json(entry):
         "q1": entry.q1, "q2": entry.q2, "q3": entry.q3,
         "q4": entry.q4, "q5": entry.q5, "q6": entry.q6, "q7": entry.q7,
         "tags": entry.tags, "actionStatus": entry.action_status, "actionNote": entry.action_note,
+        "transcript": entry.transcript or "", "facts": entry.facts or "",
+        "emotions": entry.emotions or "", "stone": entry.stone or "",
+        "betterChoice": entry.better_choice or "", "aiQuestion": entry.ai_question or "",
+        "analysisSource": entry.analysis_source or "", "analyzedAt": entry.analyzed_at or "",
         "revision": entry.revision,
         "updatedAt": entry.updated_at.isoformat() if entry.updated_at else None,
     }
@@ -98,6 +114,9 @@ def sync_entry():
             "q1": "q1", "q2": "q2", "q3": "q3", "q4": "q4",
             "q5": "q5", "q6": "q6", "q7": "q7", "tags": "tags",
             "actionStatus": "action_status", "actionNote": "action_note",
+            "transcript": "transcript", "facts": "facts", "emotions": "emotions",
+            "stone": "stone", "betterChoice": "better_choice", "aiQuestion": "ai_question",
+            "analysisSource": "analysis_source", "analyzedAt": "analyzed_at",
         }
         for field, attribute in field_map.items():
             if field in data:
@@ -112,6 +131,10 @@ def sync_entry():
             q6=data.get("q6",""), q7=data.get("q7",""),
             tags=data.get("tags", ""), action_status=data.get("actionStatus", 0),
             action_note=data.get("actionNote", ""),
+            transcript=data.get("transcript", ""), facts=data.get("facts", ""),
+            emotions=data.get("emotions", ""), stone=data.get("stone", ""),
+            better_choice=data.get("betterChoice", ""), ai_question=data.get("aiQuestion", ""),
+            analysis_source=data.get("analysisSource", ""), analyzed_at=data.get("analyzedAt", ""),
         )
         db.session.add(entry)
     db.session.commit()
@@ -135,6 +158,101 @@ def get_yesterday():
     if not entry:
         return jsonify(None), 200
     return jsonify({"date": entry.date, "q6": entry.q6, "q1": entry.q1[:60]})
+
+
+AI_LIMIT = 10
+AI_WINDOW_SECONDS = 60
+_ai_requests = {}
+_ai_lock = threading.Lock()
+
+
+def _allow_ai_request(ip):
+    now = time.monotonic()
+    with _ai_lock:
+        recent = [stamp for stamp in _ai_requests.get(ip, []) if now - stamp < AI_WINDOW_SECONDS]
+        if len(recent) >= AI_LIMIT:
+            _ai_requests[ip] = recent
+            return False
+        recent.append(now)
+        _ai_requests[ip] = recent
+        return True
+
+
+def _json_from_model(content):
+    content = (content or "").strip()
+    if content.startswith("```"):
+        lines = content.splitlines()
+        lines = lines[1:] if lines and lines[0].strip().startswith("```") else lines
+        lines = lines[:-1] if lines and lines[-1].strip() == "```" else lines
+        content = "\n".join(lines).strip()
+    value = json.loads(content)
+    if not isinstance(value, dict):
+        raise ValueError("model response must be an object")
+    return value
+
+
+def _validate_analysis(value):
+    required = {"facts", "emotions", "stone", "betterChoice", "questionForUser"}
+    if set(value) != required or not isinstance(value["facts"], list) or not all(isinstance(x, str) for x in value["facts"]):
+        raise ValueError("invalid analysis fields")
+    for item in value["emotions"]:
+        if not isinstance(item, dict) or set(item) != {"name", "intensity", "evidence"}:
+            raise ValueError("invalid emotion")
+        if not isinstance(item["name"], str) or not isinstance(item["evidence"], str) or not isinstance(item["intensity"], int) or not 0 <= item["intensity"] <= 10:
+            raise ValueError("invalid emotion type")
+    stone = value["stone"]
+    if not isinstance(stone, dict) or set(stone) != {"pattern", "confidence", "alternative"}:
+        raise ValueError("invalid stone")
+    if not isinstance(stone["pattern"], str) or not isinstance(stone["alternative"], str) or not isinstance(stone["confidence"], (int, float)) or not 0 <= stone["confidence"] <= 1:
+        raise ValueError("invalid stone type")
+    choice = value["betterChoice"]
+    if not isinstance(choice, dict) or set(choice) != {"trigger", "action", "smallestStep"} or not all(isinstance(choice[k], str) for k in choice):
+        raise ValueError("invalid betterChoice")
+    if not isinstance(value["questionForUser"], str):
+        raise ValueError("invalid question")
+    return value
+
+
+@app.route("/api/ai/daohen/analyze", methods=["POST"])
+def analyze_daohen():
+    configured_token = os.environ.get("DAOHEN_AI_TOKEN", "").strip()
+    authorization = request.headers.get("Authorization", "")
+    if not configured_token or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:].strip(), configured_token):
+        return jsonify({"message": "未授权"}), 401
+    if not _allow_ai_request(request.remote_addr or "unknown"):
+        return jsonify({"message": "请求过于频繁，请稍后再试"}), 429
+    payload = request.get_json(silent=True) or {}
+    transcript = payload.get("transcript", "")
+    if not isinstance(transcript, str) or not transcript.strip():
+        return jsonify({"message": "讲述文字不能为空"}), 400
+    transcript = transcript.strip()
+    if len(transcript) > 12000:
+        return jsonify({"message": "讲述文字不能超过 12000 字"}), 400
+    api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if not api_key:
+        return jsonify({"message": "服务端尚未配置 DeepSeek API Key"}), 503
+    base_url = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/")
+    model = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
+    system_prompt = (
+        "你是一个谨慎的自我反思助手。不要诊断心理疾病，不要虚构用户没有提到的事实。"
+        "石头只表示反复出现的恐惧、渴望、防御或行为模式。证据不足时降低 confidence 并填写 alternative。"
+        "只返回约定字段的 JSON，不要 Markdown。字段必须是 facts 字符串数组、emotions 对象数组、"
+        "stone 对象、betterChoice 对象和 questionForUser 字符串。"
+    )
+    try:
+        response = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": model, "temperature": 0.2, "response_format": {"type": "json_object"}, "messages": [
+                {"role": "system", "content": system_prompt}, {"role": "user", "content": transcript}
+            ]},
+            timeout=60,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        return jsonify(_validate_analysis(_json_from_model(content))), 200
+    except (requests.RequestException, ValueError, KeyError, TypeError, IndexError, json.JSONDecodeError):
+        return jsonify({"message": "DeepSeek 返回结果格式无效或暂时不可用"}), 502
 
 
 @app.route("/api/app/update", methods=["GET"])

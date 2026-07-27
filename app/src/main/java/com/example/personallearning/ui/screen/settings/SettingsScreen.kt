@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.example.personallearning.data.repository.AppSettings
 import com.example.personallearning.ui.viewmodel.SettingsViewModel
 import com.example.personallearning.ui.viewmodel.UpdateUiState
@@ -135,7 +136,28 @@ fun SettingsScreen(
                 settings = settings,
                 onSave = viewModel::setServerUrl
             )
+
+            SectionTitle("AI 道痕", "由配置的服务器调用 DeepSeek，应用不保存 DeepSeek API Key")
+            AiConfig(settings, viewModel)
             Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun AiConfig(settings: AppSettings, viewModel: SettingsViewModel) {
+    var token by remember(settings.aiAccessToken) { mutableStateOf(settings.aiAccessToken) }
+    Card(shape = RoundedCornerShape(8.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(0.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text("服务器访问令牌", color = fg, fontWeight = FontWeight.Medium)
+            OutlinedTextField(
+                value = token, onValueChange = { token = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                visualTransformation = PasswordVisualTransformation(), placeholder = { Text("Bearer 令牌") }
+            )
+            TextButton(onClick = { viewModel.setAiAccessToken(token) }, modifier = Modifier.align(Alignment.End)) { Text("保存令牌") }
+            SettingSwitch("启用 AI", "分析失败时仍可保留并手动编辑讲述文字", settings.aiEnabled, viewModel::setAiEnabled)
+            SettingSwitch("保留讲述文字", "将转写内容随记录保存并参与同步", settings.retainTranscript, viewModel::setRetainTranscript)
+            Text("隐私说明：讲述文字会发送到配置的服务器和 DeepSeek。", color = muted, fontSize = 11.sp)
         }
     }
 }

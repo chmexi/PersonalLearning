@@ -8,6 +8,8 @@ import com.example.personallearning.data.repository.DaoHenRepository
 import com.example.personallearning.data.repository.SyncResult
 import com.example.personallearning.data.repository.SyncConflict
 import com.example.personallearning.data.repository.SettingsRepository
+import com.example.personallearning.data.remote.AnalyzeDaoHenRequest
+import com.example.personallearning.data.remote.RetrofitClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -25,6 +27,9 @@ class DaoHenViewModel(application: Application) : AndroidViewModel(application) 
 
     private var saveJob: Job? = null
     private val saveMutex = Mutex()
+
+    private val _analysisState = MutableStateFlow<AnalysisUiState>(AnalysisUiState.Idle)
+    val analysisState: StateFlow<AnalysisUiState> = _analysisState.asStateFlow()
 
     val allEntries: StateFlow<List<DaoHenEntry>> = repository.getAllEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -70,6 +75,61 @@ class DaoHenViewModel(application: Application) : AndroidViewModel(application) 
         val entry = _currentEntry.value ?: DaoHenEntry(date = _selectedDate.value.toString())
         saveEntryImmediately(entry.copy(tags = tags.sorted().joinToString(",")))
     }
+
+    fun analyze(transcript: String) {
+        if (_analysisState.value is AnalysisUiState.Loading) return
+        viewModelScope.launch {
+            val settings = settingsRepository.settings.first()
+            if (!settings.aiEnabled || settings.aiAccessToken.isBlank()) {
+                _analysisState.value = AnalysisUiState.Failure("请先在设置中启用 AI 并填写服务器访问令牌")
+                return@launch
+            }
+            _analysisState.value = AnalysisUiState.Loading
+            try {
+                val api = RetrofitClient.getApiService(settings.serverUrl)
+                val response = api.analyzeDaoHen(
+                    "Bearer ${settings.aiAccessToken}",
+                    AnalyzeDaoHenRequest(transcript.trim())
+                )
+                if (!response.isSuccessful || response.body() == null) {
+                    _analysisState.value = AnalysisUiState.Failure("分析失败：HTTP ${response.code()}")
+                } else {
+                    _analysisState.value = AnalysisUiState.Success(response.body()!!)
+                }
+            } catch (error: Exception) {
+                _analysisState.value = AnalysisUiState.Failure(error.message ?: "分析失败")
+            }
+        }
+    }
+
+    fun saveAnalyzedEntry(
+        transcript: String,
+        facts: String,
+        emotions: String,
+        stone: String,
+        betterChoice: String,
+        aiQuestion: String
+    ) {
+        val existing = _currentEntry.value
+        val entry = (existing ?: DaoHenEntry(date = _selectedDate.value.toString())).copy(
+            transcript = transcript,
+            facts = facts,
+            emotions = emotions,
+            stone = stone,
+            betterChoice = betterChoice,
+            aiQuestion = aiQuestion,
+            analysisSource = "DeepSeek",
+            analyzedAt = java.time.Instant.now().toString(),
+            q1 = facts,
+            q2 = emotions,
+            q6 = stone,
+            q7 = betterChoice
+        )
+        saveEntryImmediately(entry)
+        _analysisState.value = AnalysisUiState.Saved
+    }
+
+    fun clearAnalysis() { _analysisState.value = AnalysisUiState.Idle }
 
     fun verifyPendingAction(status: Int, note: String = "") {
         val entry = _pendingAction.value ?: return
@@ -219,15 +279,27 @@ sealed interface SyncUiState {
     data class Conflict(val count: Int) : SyncUiState
 }
 
+sealed interface AnalysisUiState {
+    data object Idle : AnalysisUiState
+    data object Loading : AnalysisUiState
+    data object Saved : AnalysisUiState
+    data class Success(val response: com.example.personallearning.data.remote.AnalyzeDaoHenResponse) : AnalysisUiState
+    data class Failure(val message: String) : AnalysisUiState
+}
+
 private fun DaoHenEntry?.toProgress(): DaoHenProgress {
     if (this == null) return DaoHenProgress()
 
-    val answers = listOf(q1, q2, q3, q4, q5, q6, q7)
+    val answers = if (transcript.isNotBlank() || facts.isNotBlank() || emotions.isNotBlank() || stone.isNotBlank() || betterChoice.isNotBlank()) {
+        listOf(transcript, facts, emotions, stone, betterChoice)
+    } else {
+        listOf(q1, q2, q3, q4, q5, q6, q7)
+    }
     val count = answers.count { it.isNotBlank() }
     return DaoHenProgress(
         answeredCount = count,
         isComplete = count == answers.size,
-        mainStone = q6
+        mainStone = stone.ifBlank { q6 }
     )
 }
 
@@ -247,10 +319,12 @@ private fun List<DaoHenEntry>.toWeeklySummary(): WeeklySummary {
         .take(3)
         .map { it.key to it.value }
     return WeeklySummary(
-        recordedDays = weekEntries.count { listOf(it.q1, it.q2, it.q3, it.q4, it.q5, it.q6, it.q7).any(String::isNotBlank) },
-        completedDays = weekEntries.count { listOf(it.q1, it.q2, it.q3, it.q4, it.q5, it.q6, it.q7).all(String::isNotBlank) },
+        recordedDays = weekEntries.count { it.hasNewContent() || listOf(it.q1, it.q2, it.q3, it.q4, it.q5, it.q6, it.q7).any(String::isNotBlank) },
+        completedDays = weekEntries.count { if (it.hasNewContent()) listOf(it.transcript, it.facts, it.emotions, it.stone, it.betterChoice).all(String::isNotBlank) else listOf(it.q1, it.q2, it.q3, it.q4, it.q5, it.q6, it.q7).all(String::isNotBlank) },
         verifiedActions = weekEntries.count { it.actionStatus > 0 },
         fulfilledActions = weekEntries.count { it.actionStatus == 1 },
         topTags = tagCounts
     )
 }
+
+private fun DaoHenEntry.hasNewContent() = transcript.isNotBlank() || facts.isNotBlank() || emotions.isNotBlank() || stone.isNotBlank() || betterChoice.isNotBlank()

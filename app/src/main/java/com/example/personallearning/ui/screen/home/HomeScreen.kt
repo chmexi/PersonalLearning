@@ -49,7 +49,7 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("自我修行", color = fg, fontWeight = FontWeight.Bold)
+                        Text("修行", color = fg, fontWeight = FontWeight.Bold)
                         Text("今天只向前走一小步", color = muted, fontSize = 11.sp)
                     }
                 },

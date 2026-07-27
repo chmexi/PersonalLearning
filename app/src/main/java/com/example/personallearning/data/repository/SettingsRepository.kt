@@ -17,7 +17,10 @@ data class AppSettings(
     val autoDownloadUpdates: Boolean = true,
     val wifiOnlyDownloads: Boolean = true,
     val lastDownloadId: Long = -1L,
-    val lastDownloadVersionCode: Int = -1
+    val lastDownloadVersionCode: Int = -1,
+    val aiAccessToken: String = "",
+    val aiEnabled: Boolean = true,
+    val retainTranscript: Boolean = true
 ) {
     companion object {
         const val DEFAULT_SERVER_URL = "http://49.232.149.194:5001"
@@ -34,6 +37,9 @@ class SettingsRepository(private val context: Context) {
         val lastDownloadVersionCode = androidx.datastore.preferences.core.intPreferencesKey(
             "last_download_version_code"
         )
+        val aiAccessToken = stringPreferencesKey("ai_access_token")
+        val aiEnabled = booleanPreferencesKey("ai_enabled")
+        val retainTranscript = booleanPreferencesKey("retain_transcript")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { preferences ->
@@ -43,7 +49,10 @@ class SettingsRepository(private val context: Context) {
             autoDownloadUpdates = preferences[Keys.autoDownloadUpdates] ?: true,
             wifiOnlyDownloads = preferences[Keys.wifiOnlyDownloads] ?: true,
             lastDownloadId = preferences[Keys.lastDownloadId] ?: -1L,
-            lastDownloadVersionCode = preferences[Keys.lastDownloadVersionCode] ?: -1
+            lastDownloadVersionCode = preferences[Keys.lastDownloadVersionCode] ?: -1,
+            aiAccessToken = preferences[Keys.aiAccessToken] ?: "",
+            aiEnabled = preferences[Keys.aiEnabled] ?: true,
+            retainTranscript = preferences[Keys.retainTranscript] ?: true
         )
     }
 
@@ -68,6 +77,18 @@ class SettingsRepository(private val context: Context) {
             it[Keys.lastDownloadId] = value
             it[Keys.lastDownloadVersionCode] = versionCode
         }
+    }
+
+    suspend fun setAiAccessToken(value: String) {
+        context.settingsDataStore.edit { it[Keys.aiAccessToken] = value }
+    }
+
+    suspend fun setAiEnabled(value: Boolean) {
+        context.settingsDataStore.edit { it[Keys.aiEnabled] = value }
+    }
+
+    suspend fun setRetainTranscript(value: Boolean) {
+        context.settingsDataStore.edit { it[Keys.retainTranscript] = value }
     }
 
     private fun normalizeServerUrl(value: String): String {

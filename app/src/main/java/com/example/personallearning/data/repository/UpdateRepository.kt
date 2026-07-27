@@ -79,7 +79,7 @@ class UpdateRepository(private val context: Context) {
     fun enqueue(info: AppUpdateInfo, wifiOnly: Boolean): Long {
         val fileName = "personal-learning-${info.versionName}.apk"
         val request = DownloadManager.Request(Uri.parse(info.apkUrl))
-            .setTitle("自我修行 ${info.versionName}")
+            .setTitle("修行 ${info.versionName}")
             .setDescription("正在下载应用更新")
             .setMimeType(APK_MIME_TYPE)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)

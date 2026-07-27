@@ -70,6 +70,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.setServerUrl(value) }
     }
 
+    fun setAiAccessToken(value: String) { viewModelScope.launch { settingsRepository.setAiAccessToken(value) } }
+    fun setAiEnabled(value: Boolean) { viewModelScope.launch { settingsRepository.setAiEnabled(value) } }
+    fun setRetainTranscript(value: Boolean) { viewModelScope.launch { settingsRepository.setRetainTranscript(value) } }
+
     fun setCheckUpdatesOnLaunch(value: Boolean) {
         viewModelScope.launch { settingsRepository.setCheckUpdatesOnLaunch(value) }
     }
