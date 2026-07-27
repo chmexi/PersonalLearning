@@ -125,8 +125,14 @@ class DaoHenViewModel(application: Application) : AndroidViewModel(application) 
             q6 = stone,
             q7 = betterChoice
         )
-        saveEntryImmediately(entry)
-        _analysisState.value = AnalysisUiState.Saved
+        viewModelScope.launch {
+            val settings = settingsRepository.settings.first()
+            val savedEntry = entry.copy(
+                transcript = if (settings.retainTranscript) transcript else ""
+            )
+            saveEntryImmediately(savedEntry)
+            _analysisState.value = AnalysisUiState.Saved
+        }
     }
 
     fun clearAnalysis() { _analysisState.value = AnalysisUiState.Idle }

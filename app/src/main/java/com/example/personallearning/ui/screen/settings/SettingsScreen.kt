@@ -150,6 +150,12 @@ private fun AiConfig(settings: AppSettings, viewModel: SettingsViewModel) {
     Card(shape = RoundedCornerShape(8.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(0.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Text("服务器访问令牌", color = fg, fontWeight = FontWeight.Medium)
+            Text(
+                "DeepSeek 状态：由服务器端密钥决定；未配置时普通记录和同步仍可用。",
+                color = muted,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+            )
             OutlinedTextField(
                 value = token, onValueChange = { token = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                 visualTransformation = PasswordVisualTransformation(), placeholder = { Text("Bearer 令牌") }
