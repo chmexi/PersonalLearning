@@ -222,6 +222,8 @@ def analyze_daohen():
     if not _allow_ai_request(request.remote_addr or "unknown"):
         return jsonify({"message": "请求过于频繁，请稍后再试"}), 429
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"message": "请求内容格式无效"}), 400
     transcript = payload.get("transcript", "")
     if not isinstance(transcript, str) or not transcript.strip():
         return jsonify({"message": "讲述文字不能为空"}), 400

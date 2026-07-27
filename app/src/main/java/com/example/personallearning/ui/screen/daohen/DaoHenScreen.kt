@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -86,6 +88,7 @@ fun DaoHenScreen(viewModel: DaoHenViewModel, onBack: () -> Unit, onHistoryClick:
     var question by remember { mutableStateOf("") }
     var listening by remember { mutableStateOf(false) }
     var partial by remember { mutableStateOf("") }
+    val transcriptFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
     val recognizer = remember(context) { SpeechRecognizer.createSpeechRecognizer(context) }
     DisposableEffect(recognizer) {
@@ -159,14 +162,14 @@ fun DaoHenScreen(viewModel: DaoHenViewModel, onBack: () -> Unit, onHistoryClick:
                     if (listening) recognizer.stopListening()
                     else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecognition(recognizer)
                     else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }, modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp).then(Modifier), shape = CircleShape,
+                }, modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp).size(104.dp), shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = if (listening) danger else accent, contentColor = bg)
             ) { Icon(if (listening) Icons.Default.Stop else Icons.Default.Mic, "录音") }
             if (partial.isNotBlank()) Text(partial, color = muted, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(transcript, { transcript = it }, Modifier.fillMaxWidth().height(150.dp), label = { Text("讲述文字") }, placeholder = { Text("也可以直接用键盘输入") })
+            OutlinedTextField(transcript, { transcript = it }, Modifier.fillMaxWidth().height(150.dp).focusRequester(transcriptFocusRequester), label = { Text("讲述文字") }, placeholder = { Text("也可以直接用键盘输入") })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = { transcript = ""; partial = ""; viewModel.clearAnalysis() }, modifier = Modifier.weight(1f)) { Text("重新讲述") }
-                OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) { Text("手动记录") }
+                OutlinedButton(onClick = { transcriptFocusRequester.requestFocus() }, modifier = Modifier.weight(1f)) { Text("手动记录") }
             }
             Button(onClick = { viewModel.analyze(transcript) }, enabled = transcript.isNotBlank() && analysis !is AnalysisUiState.Loading, modifier = Modifier.fillMaxWidth()) {
                 if (analysis is AnalysisUiState.Loading) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp), color = fg)
