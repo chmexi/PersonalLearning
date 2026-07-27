@@ -55,6 +55,10 @@ class AnalyzeEndpointTest(unittest.TestCase):
         post.return_value = response
         headers = {"Authorization": "Bearer test-token"}
         self.assertEqual(self.client.post("/api/ai/daohen/analyze", headers=headers, json={"transcript": "x"}).status_code, 200)
+        request_payload = post.call_args.kwargs["json"]
+        self.assertEqual(request_payload["response_format"], {"type": "json_object"})
+        self.assertEqual(request_payload["max_tokens"], 1200)
+        self.assertFalse(request_payload["stream"])
         self.assertEqual(self.client.post("/api/ai/daohen/analyze", headers=headers, json={"transcript": "y"}).status_code, 200)
 
     @patch("app.requests.post")
@@ -63,6 +67,23 @@ class AnalyzeEndpointTest(unittest.TestCase):
         response = Mock()
         response.raise_for_status = Mock()
         response.json.return_value = {"choices": [{"message": {"content": "{}"}}]}
+        post.return_value = response
+        result = self.client.post(
+            "/api/ai/daohen/analyze",
+            headers={"Authorization": "Bearer test-token"},
+            json={"transcript": "x"},
+        )
+        self.assertEqual(result.status_code, 502)
+
+    @patch("app.requests.post")
+    def test_invalid_model_types(self, post):
+        os.environ["DEEPSEEK_API_KEY"] = "server-only-key"
+        response = Mock()
+        response.raise_for_status = Mock()
+        response.json.return_value = {"choices": [{"message": {"content": (
+            '{"facts":"not-an-array","emotions":[],"stone":{"pattern":"","confidence":0,"alternative":""},'
+            '"betterChoice":{"trigger":"","action":"","smallestStep":""},"questionForUser":""}'
+        )}}]}
         post.return_value = response
         result = self.client.post(
             "/api/ai/daohen/analyze",
