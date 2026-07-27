@@ -116,7 +116,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_5_6 = object : Migration(5, 6) {
+        internal val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 listOf("transcript", "facts", "emotions", "stone", "betterChoice", "aiQuestion", "analysisSource", "analyzedAt").forEach { field ->
                     db.execSQL("ALTER TABLE daohen_entries ADD COLUMN $field TEXT NOT NULL DEFAULT ''")

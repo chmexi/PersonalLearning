@@ -293,7 +293,7 @@ sealed interface AnalysisUiState {
     data class Failure(val message: String) : AnalysisUiState
 }
 
-private fun DaoHenEntry?.toProgress(): DaoHenProgress {
+internal fun DaoHenEntry?.toProgress(): DaoHenProgress {
     if (this == null) return DaoHenProgress()
 
     val answers = if (transcript.isNotBlank() || facts.isNotBlank() || emotions.isNotBlank() || stone.isNotBlank() || betterChoice.isNotBlank()) {
