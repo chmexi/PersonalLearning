@@ -22,6 +22,7 @@ class AppDatabaseMigrationTest {
         val seed = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(databaseFile, null)
         seed.execSQL("CREATE TABLE daohen_entries (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, date TEXT NOT NULL, q1 TEXT NOT NULL DEFAULT '', q2 TEXT NOT NULL DEFAULT '', q3 TEXT NOT NULL DEFAULT '', q4 TEXT NOT NULL DEFAULT '', q5 TEXT NOT NULL DEFAULT '', q6 TEXT NOT NULL DEFAULT '', q7 TEXT NOT NULL DEFAULT '', syncStatus INTEGER NOT NULL DEFAULT 0, serverRevision INTEGER NOT NULL DEFAULT 0, tags TEXT NOT NULL DEFAULT '', actionStatus INTEGER NOT NULL DEFAULT 0, actionNote TEXT NOT NULL DEFAULT '')")
         seed.execSQL("CREATE TABLE express_entries (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, date TEXT NOT NULL, retelling TEXT NOT NULL, keywords TEXT NOT NULL, observation TEXT NOT NULL, listening TEXT NOT NULL, compression TEXT NOT NULL, duration INTEGER NOT NULL, syncStatus INTEGER NOT NULL)")
+        seed.execSQL("CREATE UNIQUE INDEX index_daohen_entries_date ON daohen_entries(date)")
         seed.version = 5
         seed.close()
 
