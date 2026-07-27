@@ -237,15 +237,19 @@ def analyze_daohen():
     model = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
     system_prompt = (
         "你是一个谨慎的自我反思助手。不要诊断心理疾病，不要虚构用户没有提到的事实。"
-        "石头只表示反复出现的恐惧、渴望、防御或行为模式。证据不足时降低 confidence 并填写 alternative。"
-        "只返回约定字段的 JSON，不要 Markdown。字段必须是 facts 字符串数组、emotions 对象数组、"
-        "stone 对象、betterChoice 对象和 questionForUser 字符串。"
+        "facts 和 emotions 的 evidence 只能引用用户原文或明确表达的内容；证据不足时使用空数组或空字符串，"
+        "不要猜测。石头只表示反复出现的恐惧、渴望、防御或行为模式；证据不足时 confidence 必须较低并填写 alternative。"
+        "只返回一个 JSON 对象，不要 Markdown，不要 null，不要省略字段。必须严格匹配这个结构："
+        '{"facts":["可观察事实"],"emotions":[{"name":"情绪名称","intensity":0,"evidence":"原文依据"}],'
+        '"stone":{"pattern":"模式","confidence":0.0,"alternative":"另一种可能解释"},'
+        '"betterChoice":{"trigger":"触发情境","action":"具体行动","smallestStep":"最小一步"},'
+        '"questionForUser":"问题"}。intensity 必须是 0 到 10 的整数，confidence 必须是 0 到 1 的数字；任何字段都不能为 null。'
     )
     try:
         response = requests.post(
             f"{base_url}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": model, "temperature": 0.2, "response_format": {"type": "json_object"}, "messages": [
+            json={"model": model, "temperature": 0.2, "max_tokens": 1200, "stream": False, "response_format": {"type": "json_object"}, "messages": [
                 {"role": "system", "content": system_prompt}, {"role": "user", "content": transcript}
             ]},
             timeout=60,
